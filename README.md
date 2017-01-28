@@ -2,7 +2,7 @@
 
 nagios check for insecure content on a webpage
 
-either you need python-selenium from jessie-backport and
+either you need python-selenium from jessie-backports and
 node install -g phantomjs:
 
     ./check_http_insecure_content https://www.abcnyheter.no/
