@@ -13,8 +13,6 @@ import os
 import sys
 import signal
 
-import pprint
-
 from selenium import webdriver
 
 try:
@@ -26,10 +24,14 @@ except IndexError:
 #driver = webdriver.PhantomJS()
 driver = webdriver.PhantomJS(service_log_path=os.path.devnull)
 driver.set_window_size(1120, 550)
-driver.get(url)
+
+try:
+    driver.get(url)
+except:
+    print "something gone wrong"
+    sys.exit(3)
 
 print driver.current_url,
-print ": ",
 
 browser_log = driver.get_log("browser")
 
@@ -39,16 +41,10 @@ driver.quit()
 
 insecureflag = False
 
-#print "debug:"
-#print browser_log
-#print "\n\n"
-
 if browser_log:
     for entry in browser_log:
-        # pprint.pprint(entry)
         for key,value in entry.items():
             if key == "message":
-                #pprint.pprint(value)
                 print value.replace("\n (:)", ""),
                 if u'insecure' in value:
                     insecureflag = True
@@ -62,6 +58,6 @@ if browser_log:
         sys.exit(1)
 
 else:
-    print "No logs from webdriver.PhantomJS() with \"insecure\""
+    print "No logs from webdriver.PhantomJS()"
     sys.exit(0)
 
