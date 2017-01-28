@@ -6,7 +6,7 @@
 # TODO: prototypes are clunky
 #
 # requires deb python-selenium
-# non-dpkg install of phantomjs: npm install phantomjs-prebuilt
+# non-dpkg install of phantomjs: npm install -g phantomjs-prebuilt
 
 
 import os
