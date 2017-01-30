@@ -10,5 +10,4 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN npm install -g phantomjs-prebuilt
 COPY check_http_insecure_content /root/
-ENV URL https://google.no/
 CMD /root/check_http_insecure_content $URL
