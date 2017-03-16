@@ -46,14 +46,16 @@ if browser_log:
                 output += value + "\n"
                 if u'ran insecure' in value:
                     insecureflag = True
+                elif u'insecure' in value:
+                    warningflag = True
 
     if insecureflag:
         print "Browser log for " + url + "matches /ran insecure/. Insecure content on page. Alarm."
         print output
         sys.exit(2)
 
-    else:
-        print "Something going on wrt " + url + ", but not /ran insecure/"
+    elif warningflag:
+        print url + " contains /insecure/, but not /ran insecure/"
         print output
         sys.exit(1)
 
