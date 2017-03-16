@@ -38,19 +38,23 @@ driver.quit()
 insecureflag = False
 
 if browser_log:
+    output = ""
     for entry in browser_log:
         for key,value in entry.items():
             if key == "message":
-                print value.replace("\n (:)", "\n"),
-                if u'insecure' in value:
+                # print value.replace("\n (:)", "\n"),
+                output += value + "\n"
+                if u'ran insecure' in value:
                     insecureflag = True
 
     if insecureflag:
-        print "Browser log matches /insecure/. Alarm."
+        print "Browser log for " + url + "matches /ran insecure/. Insecure content on page. Alarm."
+        print output
         sys.exit(2)
 
     else:
-        print "Something going on, but not insecure"
+        print "Something going on wrt " + url + ", but not /ran insecure/"
+        print output
         sys.exit(1)
 
 else:

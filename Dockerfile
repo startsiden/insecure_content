@@ -8,5 +8,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python-selenium
 
 RUN npm install -g phantomjs-prebuilt
-COPY check_http_insecure_content /root/
-CMD /root/check_http_insecure_content $URL
+COPY insecure_content /root/
+CMD /root/insecure_content $URL
