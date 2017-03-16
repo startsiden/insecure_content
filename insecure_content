@@ -61,5 +61,6 @@ if browser_log:
 
 else:
     print "No logs from webdriver.PhantomJS()"
+    print output
     sys.exit(0)
 
