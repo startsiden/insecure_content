@@ -12,55 +12,112 @@
 import os
 import sys
 import signal
+import pycurl
+from urlparse import urlparse
+from publicsuffix import PublicSuffixList
 
 from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
+
+error = False
+warning = False
+
+def _get_page(url):
+    driver = webdriver.PhantomJS(service_log_path=os.path.devnull)
+    driver.set_window_size(1120, 550)
+
+    driver.get(url)
+
+    output = {}
+    output['log'] = driver.get_log("browser")
+    output['links'] = set()
+    try:
+        anchors = driver.find_elements_by_tag_name('a')
+        domain = PublicSuffixList().get_public_suffix(urlparse(url).netloc)
+        for anchor in anchors:
+            href = anchor.get_attribute('href')
+            if href:
+                host = urlparse(href)
+                if domain not in host.netloc and host.scheme == 'https':
+                    output['links'].add('{url.scheme}://{url.netloc}/'.format(url=host))
+    except NoSuchElementException:
+        print "No anchor elements on {0}".format(url)
+
+    # http://stackoverflow.com/questions/25110624/how-to-properly-stop-phantomjs-execution
+    driver.service.process.send_signal(signal.SIGTERM)
+    driver.quit()
+
+    return output
+
+def _verify_ssl(url):
+    response = 0
+    curl = pycurl.Curl()
+    curl.setopt(curl.SSL_VERIFYPEER, 1)
+    curl.setopt(curl.SSL_VERIFYHOST, 2)
+    curl.setopt(curl.URL, url)
+    curl.setopt(curl.FOLLOWLOCATION, True)
+    curl.setopt(curl.WRITEFUNCTION, lambda bytes: len(bytes))
+
+    try:
+        curl.perform()
+        response = curl.getinfo(curl.RESPONSE_CODE)
+        if response == 404:
+            warning = True
+            print "Warning loading {0}: got 404!".format(url)
+        else:
+            print "No problems with {0}".format(url)
+    except pycurl.error, e:
+        global error
+        error = True
+        print "Error loading {0}: {1}".format(url, e.args[1])
+    
+def _parse_log(log):
+    output = ""
+    for entry in log:
+        for key,value in entry.items():
+            if key == "message":
+                if u'ran insecure' in value:
+                    output += value + "\n"
+                    global error
+                    error = True
+                elif u'insecure' in value:
+                    output += value + "\n"
+                    global warning
+                    warning = True
+    
+    if error:
+        print "Browser log for {0} contains /ran insecure/. Insecure content on page".format(url)
+
+    elif warning:
+        print "Browser log for {0} contains /insecure/, but not /ran insecure/".format(url)
+
+    else:
+        print "Browser log for {0} does not contain /insecure/".format(url)
+
+    print output
 
 try:
-    url = sys.argv[1]
+    url = str(sys.argv[1])
 except IndexError:
     print "No hostname specified, try https://google.com as arg[1]?"
     sys.exit(3)
 
-#driver = webdriver.PhantomJS()
-driver = webdriver.PhantomJS(service_log_path=os.path.devnull)
-driver.set_window_size(1120, 550)
+page = _get_page(url)
+log = False
+if page['log']:
+    _parse_log(page['log'])
+for link in page['links']:
+    _verify_ssl(link)
 
-driver.get(url)
+if error:
+    print "Alarm!"
+    sys.exit(2)
 
-# print driver.current_url,
-
-browser_log = driver.get_log("browser")
-
-# http://stackoverflow.com/questions/25110624/how-to-properly-stop-phantomjs-execution
-driver.service.process.send_signal(signal.SIGTERM)
-driver.quit()
-
-insecureflag = False
-
-if browser_log:
-    output = ""
-    for entry in browser_log:
-        for key,value in entry.items():
-            if key == "message":
-                # print value.replace("\n (:)", "\n"),
-                output += value + "\n"
-                if u'ran insecure' in value:
-                    insecureflag = True
-                elif u'insecure' in value:
-                    warningflag = True
-
-    if insecureflag:
-        print "Browser log for " + url + "matches /ran insecure/. Insecure content on page. Alarm."
-        print output
-        sys.exit(2)
-
-    elif warningflag:
-        print url + " contains /insecure/, but not /ran insecure/"
-        print output
-        sys.exit(1)
+elif warning:
+    print "Warning!"
+    sys.exit(1)
 
 else:
-    print "No logs from webdriver.PhantomJS()"
-    print output
+    print "Url {0} has no insecure inclusions or problems with links on page".format(url)
     sys.exit(0)
 

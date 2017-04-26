@@ -6,7 +6,8 @@ NAME=check-http-insecure-content
 NS=nagios
 KUBECTL="/usr/local/bin/kubectl --namespace $NS"
 
-$KUBECTL get pods --selector name=$NAME -o name 2>/dev/null | while read POD ; do kubectl delete $POD; done >/dev/null 2>/dev/null
+$KUBECTL get pods --show-all --selector name=$NAME -o name 2>/dev/null \
+  | while read POD ; do kubectl delete $POD; done >/dev/null 2>/dev/null
 
 $KUBECTL run $NAME \
   --quiet \
