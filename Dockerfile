@@ -1,4 +1,4 @@
-FROM python:2.7-slim
+FROM debian:jessie-slim
 
 RUN awk '$1 ~ "^deb" { $3 = $3 "-backports"; print; exit }' \
   /etc/apt/sources.list > /etc/apt/sources.list.d/backports.list \
@@ -11,7 +11,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     python-pip \
     python-selenium \
-    python-pycurl
+    python-pycurl \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /usr/share/man/??_*
 
 RUN /usr/bin/python -m pip install publicsuffix 
 
@@ -21,9 +23,8 @@ RUN export PHANTOM_JS="phantomjs-1.9.8-linux-x86_64" && curl -sOL \
   https://bitbucket.org/ariya/phantomjs/downloads/$PHANTOM_JS.tar.bz2 \
   && tar xjf $PHANTOM_JS.tar.bz2 \
   && rm $PHANTOM_JS.tar.bz2 \
-  && mv $PHANTOM_JS /usr/local/share \
-  && ln -sf /usr/local/share/$PHANTOM_JS/bin/phantomjs /usr/local/bin \
-  && phantomjs --version
+  && mv $PHANTOM_JS/bin/phantomjs /usr/local/bin \
+  && rm -rf $PHANTOM_JS/
 
 COPY insecure_content /usr/local/bin/
 RUN chmod +x /usr/local/bin/insecure_content
