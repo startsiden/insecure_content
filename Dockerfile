@@ -13,10 +13,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python-pip \
     python-selenium \
     python-pycurl \
+    python-joblib \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /usr/share/man/??_*
 
-RUN /usr/bin/python -m pip install publicsuffix 
+RUN /usr/bin/python -m pip install publicsuffix
 
 WORKDIR /root
 
