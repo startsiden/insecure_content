@@ -18,6 +18,7 @@ from publicsuffix import PublicSuffixList
 
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import TimeoutException
 
 error = False
 warning = False
@@ -25,21 +26,35 @@ warning = False
 def _get_page(url):
     driver = webdriver.PhantomJS(service_log_path=os.path.devnull)
     driver.set_window_size(1120, 550)
+    driver.set_page_load_timeout(10)
 
-    driver.get(url)
+    try:
+        driver.get(url)
+    except TimeoutException:
+        print "Connection to {0} timeout (10s)!"
+        sys.exit(1)
 
     output = {}
     output['log'] = driver.get_log("browser")
     output['links'] = set()
     try:
         anchors = driver.find_elements_by_tag_name('a')
-        domain = PublicSuffixList().get_public_suffix(urlparse(url).netloc)
+        domains = [
+            'startsiden.no',
+            'abcnyheter.no',
+            'sedenne.no',
+            'zooom.no',
+            'kreativeideer.com',
+            'meetv.no',
+            'abcmedia.no'
+        ]
         for anchor in anchors:
             href = anchor.get_attribute('href')
             if href:
                 host = urlparse(href)
-                if domain not in host.netloc and host.scheme == 'https':
-                    output['links'].add('{url.scheme}://{url.netloc}/'.format(url=host))
+                domain = PublicSuffixList().get_public_suffix(host.netloc)
+                if domain not in domains and host.scheme == 'https':
+                    output['links'].add('{url.scheme}://{url.netloc}{url.path}'.format(url=host))
     except NoSuchElementException:
         print "No anchor elements on {0}".format(url)
 
@@ -54,22 +69,26 @@ def _verify_ssl(url):
     curl = pycurl.Curl()
     curl.setopt(curl.SSL_VERIFYPEER, 1)
     curl.setopt(curl.SSL_VERIFYHOST, 2)
+    curl.setopt(curl.CONNECTTIMEOUT, 3)
     curl.setopt(curl.URL, url)
     curl.setopt(curl.FOLLOWLOCATION, True)
     curl.setopt(curl.WRITEFUNCTION, lambda bytes: len(bytes))
 
+    output = ""
     try:
         curl.perform()
         response = curl.getinfo(curl.RESPONSE_CODE)
         if response == 404:
             warning = True
-            print "Warning loading {0}: got 404!".format(url)
+            output += "Warning loading {0}: got 404!\n".format(url)
         else:
-            print "No problems with {0}".format(url)
+            output += "No problems with {0}\n".format(url)
     except pycurl.error, e:
         global error
         error = True
         print "Error loading {0}: {1}".format(url, e.args[1])
+
+    return output
     
 def _parse_log(log):
     output = ""
@@ -91,10 +110,7 @@ def _parse_log(log):
     elif warning:
         print "Browser log for {0} contains /insecure/, but not /ran insecure/".format(url)
 
-    else:
-        print "Browser log for {0} does not contain /insecure/".format(url)
-
-    print output
+    return output
 
 try:
     url = str(sys.argv[1])
@@ -104,20 +120,34 @@ except IndexError:
 
 page = _get_page(url)
 log = False
+links = False
 if page['log']:
-    _parse_log(page['log'])
+    log = _parse_log(page['log'])
+links = ""
 for link in page['links']:
-    _verify_ssl(link)
+    links += "{0}".format(_verify_ssl(link))
 
 if error:
+    if log:
+        print log
+    if links:
+        print links
     print "Alarm!"
     sys.exit(2)
 
 elif warning:
+    if log:
+        print log
+    if links:
+        print links
     print "Warning!"
     sys.exit(1)
 
 else:
     print "Url {0} has no insecure inclusions or problems with links on page".format(url)
+    if log:
+        print log
+    if links:
+        print links
     sys.exit(0)
 

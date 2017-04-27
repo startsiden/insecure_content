@@ -2,7 +2,8 @@
 
 set -euo pipefail
 
-NAME=check-http-insecure-content-${RANDOM}
+IMAGE=check-http-insecure-content
+NAME=${IMAGE}-${RANDOM}
 NS=nagios
 KUBECTL="/usr/local/bin/kubectl --namespace $NS"
 

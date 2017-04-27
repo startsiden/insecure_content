@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libfontconfig \
     libfreetype6 \
     curl \
+    ca-certificates \
     python-pip \
     python-selenium \
     python-pycurl \
